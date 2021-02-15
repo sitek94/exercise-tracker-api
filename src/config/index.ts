@@ -1,20 +1,59 @@
-import chalk from 'chalk';
 import dotenv from 'dotenv';
 
-dotenv.config();
-
-const { NODE_ENV, MONGO_URI_DEV, MONGO_URI_PROD } = process.env;
-
-const isProduction = NODE_ENV === 'production';
-
-export const PORT = process.env.PORT || 5000;
-
-export const MONGO_URI = isProduction ? MONGO_URI_PROD : MONGO_URI_DEV;
-
-if (!MONGO_URI) {
-  console.log(
-    chalk.red(`[MongoDB] Missing connection string for MongoDB in ${NODE_ENV}`),
-  );
-
-  process.exit(1);
+const envFound = dotenv.config();
+if (envFound.error) {
+  // This error should crash whole process
+  throw new Error("⚠️  Couldn't find .env file  ⚠️");
 }
+
+// Safely get the environment variable in the process
+const env = (name: string): string => {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`⚠️  Missing: process.env['${name}']  ⚠️`);
+  }
+
+  return value;
+};
+
+const isProd = env('NODE_ENV') === 'production';
+
+// All your secrets, keys go here
+const config = {
+  /**
+   * Your favorite port
+   */
+  port: +env('PORT'),
+
+  /**
+   * Is the app running in production mode?
+   */
+  isProd,
+
+  /**
+   * If not production - development mode
+   */
+  isDev: !isProd,
+
+  /**
+   * Used by winston logger
+   */
+  logs: {
+    level: process.env.LOG_LEVEL || 'silly',
+  },
+
+  /**
+   * That long string from MongoDB
+   */
+  mongoUri: env(`MONGO_URI_${isProd ? 'PROD' : 'DEV'}`),
+
+  /**
+   * API configs
+   */
+  api: {
+    prefix: '/api',
+  },
+};
+
+export default config;

@@ -2,13 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import exerciseRoutes from './routes/exercise';
-import { MONGO_URI, PORT } from './config';
+import config from './config';
 import { errorHandler } from './middleware/error-handler';
+import logger from './utils/logger';
 
 const app = express();
 
 // Express configuration
-app.set('port', PORT || 5000);
+app.set('port', config.port || 5000);
 app.use(cors({ optionsSuccessStatus: 200 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -16,13 +17,17 @@ app.use(express.static('public'));
 
 // Connect to MongoDB
 mongoose
-  .connect(MONGO_URI, {
+  .connect(config.mongoUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useCreateIndex: true,
   })
-  .then(() => console.log(`✅ MongoDB connected...`))
-  .catch((err) => console.log(`❌ MongoDB failed to connect, ${err.message}`));
+  .then(() => {
+    logger.info(`✅ MongoDB connected`);
+  })
+  .catch((err) => {
+    logger.info(`❌ MongoDB failed to connect`, err.message);
+  });
 
 // Homepage route
 app.get('/', (req, res) => {
