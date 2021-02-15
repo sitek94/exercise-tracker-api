@@ -6,7 +6,7 @@ export const errorHandler: ErrorRequestHandler = function (
   res,
   next,
 ) {
-  res.status(200).json({
+  res.status(400).json({
     error: err.message,
   });
 };

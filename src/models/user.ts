@@ -10,7 +10,9 @@ const userSchema = new Schema(
   },
   {
     versionKey: false,
-  }
+  },
 );
 
-export const User = model<UserDocument>('User', userSchema);
+const User = model<UserDocument>('User', userSchema);
+
+export default User;

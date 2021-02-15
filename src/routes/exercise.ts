@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { User } from '../models/user';
+import User from '../models/user';
 import { Exercise } from '../models/exercise';
 import { body, query, validationResult } from 'express-validator';
 import { validDateRe } from '../utils/valid-date-regex';
@@ -32,7 +32,7 @@ router.post('/new-user', async (req, res) => {
 
     // User already exists
     if (existingUser) {
-      res.json({ error: 'User with that name already exists' });
+      throw new Error('Username taken');
     }
 
     // Create new user
@@ -43,6 +43,7 @@ router.post('/new-user', async (req, res) => {
 
     res.json(user);
   } catch (e) {
+    // res.json({ error: e.message });
     res.json({ error: e.message });
   }
 });
