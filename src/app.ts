@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import mongoose from 'mongoose';
+import exerciseRoutes from './routes/exercise';
 import { MONGO_URI, PORT } from './config';
 import { errorHandler } from './middleware/error-handler';
 
@@ -19,6 +19,7 @@ mongoose
   .connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    useCreateIndex: true,
   })
   .then(() => console.log(`✅ MongoDB connected...`))
   .catch((err) => console.log(`❌ MongoDB failed to connect, ${err.message}`));
@@ -29,6 +30,9 @@ app.get('/', (req, res) => {
     status: 'OK',
   });
 });
+
+// Api
+app.use('/api/exercise', exerciseRoutes);
 
 // 404: Not Found
 app.all('*', (req, res) => {
