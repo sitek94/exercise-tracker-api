@@ -1,12 +1,20 @@
-import { ErrorRequestHandler } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import { ExpressJoiError } from 'express-joi-validation';
 
-export const errorHandler: ErrorRequestHandler = function (
-  err,
-  req,
-  res,
-  next,
+export default function errorHandler(
+  err: any | ExpressJoiError,
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) {
-  res.status(400).json({
-    error: err.message,
-  });
-};
+  if (err && err.error && err.error.isJoi) {
+    const e: ExpressJoiError = err;
+    return res.status(400).json({
+      error: `You submitted a bad ${e.type} parameter`,
+    });
+  } else {
+    res.status(400).json({
+      error: err.message,
+    });
+  }
+}

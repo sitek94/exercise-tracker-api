@@ -3,7 +3,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import exerciseRoutes from './routes/exercise';
 import config from './config';
-import { errorHandler } from './middleware/error-handler';
+import errorHandler from './middleware/error-handler';
 import logger from './utils/logger';
 
 const app = express();
