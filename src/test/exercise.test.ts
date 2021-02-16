@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe('/api/exercise', () => {
-  describe(`${baseUrl}/new-user`, () => {
+  describe('POST /new-user', () => {
     it('successfully adds a new user', async () => {
       const res = await request(app).post(`${baseUrl}/new-user`).send({
         username: 'test-user',
@@ -33,56 +33,198 @@ describe('/api/exercise', () => {
         expect(e.message).toMatch(/username taken/i);
       }
     });
+  });
 
-    describe('/users', () => {
-      it('successfully logs all users', async () => {
-        await request(app).post(`${baseUrl}/new-user`).send({
-          username: 'test-user-one',
-        });
-        await request(app).post(`${baseUrl}/new-user`).send({
-          username: 'test-user-two',
-        });
-
-        const usersRes = await request(app).get(`${baseUrl}/users`);
-
-        expect(usersRes.status).toBe(200);
-        expect(usersRes.body.length).toBe(2);
+  describe('GET /users', () => {
+    it('successfully logs all users', async () => {
+      await request(app).post(`${baseUrl}/new-user`).send({
+        username: 'test-user-one',
+      });
+      await request(app).post(`${baseUrl}/new-user`).send({
+        username: 'test-user-two',
       });
 
-      it('returns error when failed to find the users', async (done) => {
-        jest.spyOn(User, 'find').mockRejectedValue(new Error('test'));
+      const usersRes = await request(app).get(`${baseUrl}/users`);
 
-        const res = await request(app).get(`${baseUrl}/users`);
-        expect(res.body.error).toBe('test');
-
-        done();
-      });
+      expect(usersRes.status).toBe(200);
+      expect(usersRes.body.length).toBe(2);
     });
 
-    describe('/add', () => {
-      it('successfully adds new exercise', async () => {
-        const userRes = await request(app).post(`${baseUrl}/new-user`).send({
-          username: 'test-user-one',
-        });
+    it('returns error when failed to find the users', async (done) => {
+      jest.spyOn(User, 'find').mockRejectedValue(new Error('test'));
 
-        const { _id, username } = userRes.body;
-        const expected = {
-          _id,
-          username,
-          description: 'test',
-          duration: 60,
-          date: 'Wed Jan 01 2020',
-        };
+      const res = await request(app).get(`${baseUrl}/users`);
+      expect(res.body.error).toBe('test');
 
-        const exerciseRes = await request(app).post(`${baseUrl}/add`).send({
-          userId: expected._id,
-          description: expected.description,
-          duration: expected.duration,
-          date: '2020-01-01',
-        });
+      done();
+    });
+  });
 
-        expect(exerciseRes.body).toEqual(expected);
+  describe('POST /add', () => {
+    it('successfully adds new exercise', async () => {
+      const userRes = await request(app).post(`${baseUrl}/new-user`).send({
+        username: 'test-user-one',
       });
+
+      const { _id, username } = userRes.body;
+      const expected = {
+        _id,
+        username,
+        description: 'test',
+        duration: 60,
+        date: 'Wed Jan 01 2020',
+      };
+
+      const exerciseRes = await request(app).post(`${baseUrl}/add`).send({
+        userId: expected._id,
+        description: expected.description,
+        duration: expected.duration,
+        date: '2020-01-01',
+      });
+
+      expect(exerciseRes.body).toEqual(expected);
+    });
+
+    it('adds new exercise with current date when date is not specified', async () => {
+      const userRes = await request(app).post(`${baseUrl}/new-user`).send({
+        username: 'test-user-one',
+      });
+
+      const { _id, username } = userRes.body;
+      const expected = {
+        _id,
+        username,
+        description: 'test',
+        duration: 60,
+        date: new Date().toDateString(),
+      };
+
+      const exerciseRes = await request(app).post(`${baseUrl}/add`).send({
+        userId: expected._id,
+        description: expected.description,
+        duration: expected.duration,
+      });
+
+      expect(exerciseRes.body).toEqual(expected);
+    });
+
+    it('returns status 400 when user is not found', async (done) => {
+      const res = await request(app).post(`${baseUrl}/add`).send({
+        userId: 'test-user-id',
+        description: 'test-desc',
+        duration: 60,
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/user not found/i);
+
+      done();
+    });
+  });
+
+  describe('GET /log', () => {
+    it('successfully logs exercise when using "from", "to" and "limit" query params', async () => {
+      const userRes = await request(app).post(`${baseUrl}/new-user`).send({
+        username: 'test-user-one',
+      });
+
+      const { _id, username } = userRes.body;
+      const exerciseOne = {
+        _id,
+        username,
+        description: 'test',
+        duration: 60,
+        date: 'Wed Jan 01 2020',
+      };
+      const exerciseTwo = {
+        _id,
+        username,
+        description: 'test',
+        duration: 60,
+        date: 'Thu Jan 02 2020',
+      };
+
+      await request(app).post(`${baseUrl}/add`).send({
+        userId: exerciseOne._id,
+        description: exerciseOne.description,
+        duration: exerciseOne.duration,
+        date: '2020-01-01',
+      });
+
+      await request(app).post(`${baseUrl}/add`).send({
+        userId: exerciseTwo._id,
+        description: exerciseTwo.description,
+        duration: exerciseTwo.duration,
+        date: '2020-01-02',
+      });
+
+      const logRes = await request(app).get(`${baseUrl}/log`).query({
+        userId: _id,
+        from: '2019-12-31',
+        to: '2020-01-02',
+        limit: 2,
+      });
+
+      expect(logRes.body._id).toBe(_id);
+      expect(logRes.body.username).toBe(username);
+      expect(logRes.body.count).toBe(2);
+      expect(logRes.body.log.length).toBe(2);
+    });
+
+    it('successfully logs all exercises when using only "userId"', async () => {
+      const userRes = await request(app).post(`${baseUrl}/new-user`).send({
+        username: 'test-user-one',
+      });
+
+      const { _id, username } = userRes.body;
+      const exerciseOne = {
+        _id,
+        username,
+        description: 'test',
+        duration: 60,
+        date: 'Wed Jan 01 2020',
+      };
+      const exerciseTwo = {
+        _id,
+        username,
+        description: 'test',
+        duration: 60,
+        date: 'Thu Jan 02 2020',
+      };
+
+      await request(app).post(`${baseUrl}/add`).send({
+        userId: exerciseOne._id,
+        description: exerciseOne.description,
+        duration: exerciseOne.duration,
+        date: '2020-01-01',
+      });
+
+      await request(app).post(`${baseUrl}/add`).send({
+        userId: exerciseTwo._id,
+        description: exerciseTwo.description,
+        duration: exerciseTwo.duration,
+        date: '2020-01-02',
+      });
+
+      const logRes = await request(app).get(`${baseUrl}/log`).query({
+        userId: _id,
+      });
+
+      expect(logRes.body._id).toBe(_id);
+      expect(logRes.body.username).toBe(username);
+      expect(logRes.body.count).toBe(2);
+      expect(logRes.body.log.length).toBe(2);
+    });
+
+    it('returns status 400 when user is not found', async (done) => {
+      const res = await request(app).get(`${baseUrl}/log`).query({
+        userId: 'test-user-id',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/user not found/i);
+
+      done();
     });
   });
 });
