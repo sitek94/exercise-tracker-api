@@ -37,7 +37,20 @@ request to retrieve part of the log of any user. `from` and `to` are dates in
 
 ## Installation
 
-### Install dependencies
+### MongoDB Atlas
+
+Use your existing account or create a new one. If you don't know how to do that,
+you can follow
+[step by step tutorial by freeCodeCamp](https://www.freecodecamp.org/learn/apis-and-microservices/mongodb-and-mongoose/).
+
+Once you have connected to your cluster, use `.sample.env` to create your `.env`
+file.
+
+```env
+MONGO_URI_PROD=mongodb+srv://<user>:<password>@<cluster#-dbname>.mongodb.net/test
+
+MONGO_URI_DEV=mongodb://localhost:27017/<db_name>
+```
 
 ```bash
 $ npm install
@@ -47,4 +60,11 @@ $ npm install
 
 ```bash
 $ npm run dev
+```
+
+### Run tests
+
+```bash
+$ npm test
+$ npm run test-coverage
 ```
