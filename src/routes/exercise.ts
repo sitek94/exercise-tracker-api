@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import User from '../models/user';
-import { Exercise } from '../models/exercise';
 import { ValidatedRequest } from 'express-joi-validation';
+import User from '../models/user';
+import Exercise from '../models/exercise';
 import validator, {
   AddRequestSchema,
   addSchema,

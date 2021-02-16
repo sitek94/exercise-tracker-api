@@ -19,7 +19,9 @@ const exerciseSchema = new Schema(
   },
   {
     versionKey: false,
-  }
+  },
 );
 
-export const Exercise = model<ExerciseDocument>('Exercise', exerciseSchema);
+const Exercise = model<ExerciseDocument>('Exercise', exerciseSchema);
+
+export default Exercise;
