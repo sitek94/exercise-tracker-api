@@ -1,8 +1,13 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import User from '../models/user';
 import { Exercise } from '../models/exercise';
-import { body, query, validationResult } from 'express-validator';
-import { validDateRe } from '../utils/valid-date-regex';
+import { ValidatedRequest } from 'express-joi-validation';
+import validator, {
+  AddRequestSchema,
+  addSchema,
+  LogRequestSchema,
+  logSchema,
+} from '../middleware/validator';
 
 const router = Router();
 
@@ -44,7 +49,7 @@ router.post('/new-user', async (req, res) => {
     res.json(user);
   } catch (e) {
     // res.json({ error: e.message });
-    res.json({ error: e.message });
+    res.status(400).json({ error: e.message });
   }
 });
 
@@ -53,32 +58,14 @@ router.post('/new-user', async (req, res) => {
  */
 router.post(
   '/add',
-  body(['userId', 'description']).notEmpty(),
-  body('duration').notEmpty().isInt(),
-  body('date').matches(validDateRe).optional({ checkFalsy: true }),
-  async (req: Request, res: Response) => {
-    // Check if body is empty
-    if (!req.body) {
-      return res.json({ error: 'Body cannot be empty' });
-    }
-
-    // Validate request body
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.json({
-        errors: errors.array(),
-      });
-    }
-
-    const userId: string = req.body.userId;
-    const description: string = req.body.description;
-    const duration = Number(req.body.duration);
-    const date = req.body.date;
-
-    // Create date object
-    const dateObj = date ? new Date(date.split('-')) : new Date();
+  validator.body(addSchema),
+  async (req: ValidatedRequest<AddRequestSchema>, res) => {
+    const { userId, description, duration, date } = req.body;
 
     try {
+      // Create date object
+      const dateObj = date ? new Date(date) : new Date();
+
       // Find the user by id
       const user = await User.findOne({ _id: userId });
 
@@ -108,7 +95,7 @@ router.post(
         date: dateObj.toDateString(),
       });
     } catch (e) {
-      res.json({ error: e.message });
+      res.status(400).json({ error: e.message });
     }
   },
 );
@@ -118,65 +105,35 @@ router.post(
  */
 router.get(
   '/log',
-  query('userId').notEmpty(),
-  query(['from', 'to']).matches(validDateRe).optional({ nullable: true }),
-  query('limit').isInt().optional({ nullable: true }),
-  async (req, res) => {
-    // Validate query parameters
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.json({
-        errors: errors.array(),
-      });
-    }
+  validator.query(logSchema),
+  async (req: ValidatedRequest<LogRequestSchema>, res) => {
+    const { userId, from, to, limit } = req.query;
 
     try {
-      if (!req.query) throw new Error('userId is required');
-
-      const { userId } = req.query;
-
-      // Find user by id
+      // Find the user by id
       const user = await User.findOne({ _id: userId });
 
       // User not found
-      if (!user) {
-        return res.json({ error: 'Uknown user' });
-      }
-
-      // Optional parameters
-      const { from, to, limit } = req.query;
-
-      const fromDate = from ? new Date(from.split('-')) : undefined;
-      const toDate = to ? new Date(to.split('-')) : undefined;
-      const limitNumber = limit ? Number(limit) : undefined;
-
-      interface DateQuery {
-        $gt?: Date;
-        $lt?: Date;
-      }
+      if (!user) throw new Error(`User not found`);
 
       interface Query {
         userId: string;
-        date?: DateQuery;
+        date?: {
+          $gte?: Date;
+          $lte?: Date;
+        };
       }
 
-      const dateQuery: DateQuery = {};
-
-      // Optionally construct date query
-      if (fromDate) dateQuery.$gt = fromDate;
-      if (toDate) dateQuery.$lt = toDate;
-
-      // Initial query, userId is required
       const query: Query = { userId };
 
-      // Append date queries (if any)
-      if (Object.keys(dateQuery).length) {
-        query.date = dateQuery;
-      }
+      // Optionally add "from" and "to" filters
+      if (from || to) query.date = {};
+      if (from) query.date.$gte = new Date(from);
+      if (to) query.date.$lte = new Date(to);
 
       // Find all user exercises
       const exercises = await Exercise.find(query, null, {
-        limit: limitNumber,
+        limit,
       });
 
       // Construct exercises log array
@@ -194,7 +151,7 @@ router.get(
         log: exercisesLog,
       });
     } catch (e) {
-      return res.json({ error: e.message });
+      return res.status(400).json({ error: e.message });
     }
   },
 );
